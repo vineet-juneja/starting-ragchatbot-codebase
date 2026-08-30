@@ -13,7 +13,6 @@ import pytest
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
-
 from vector_store import SearchResults
 
 
@@ -57,8 +56,8 @@ class FakeVectorStore:
         # search() returns this; may be a SearchResults or a zero-arg callable
         self.search_result = SearchResults(documents=[], metadata=[], distances=[])
         self.search_calls = []
-        self.lesson_links = {}          # (course_title, lesson_number) -> url
-        self.outline_result = None      # dict or None, returned by get_course_outline
+        self.lesson_links = {}  # (course_title, lesson_number) -> url
+        self.outline_result = None  # dict or None, returned by get_course_outline
         self.outline_calls = []
         self.course_count = 0
         self.course_titles = []

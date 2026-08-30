@@ -1,5 +1,6 @@
+from typing import Any, Dict, List, Optional
+
 import anthropic
-from typing import List, Optional, Dict, Any
 
 # Maximum number of sequential tool-calling rounds Claude gets per user query.
 # Each round is its own API request, so Claude can reason over one round's
@@ -49,13 +50,16 @@ Provide only the direct answer to what was asked.
         self.base_params = {
             "model": self.model,
             "max_tokens": 800,
-            "thinking": {"type": "disabled"}
+            "thinking": {"type": "disabled"},
         }
 
-    def generate_response(self, query: str,
-                         conversation_history: Optional[str] = None,
-                         tools: Optional[List] = None,
-                         tool_manager=None) -> str:
+    def generate_response(
+        self,
+        query: str,
+        conversation_history: Optional[str] = None,
+        tools: Optional[List] = None,
+        tool_manager=None,
+    ) -> str:
         """
         Generate an AI response, letting Claude call tools across up to
         MAX_TOOL_ROUNDS sequential rounds before it must answer in prose.
@@ -89,9 +93,11 @@ Provide only the direct answer to what was asked.
         response = self._call_llm(messages, system_content, tools)
 
         rounds = 0
-        while (tool_manager
-               and response.stop_reason == "tool_use"
-               and rounds < MAX_TOOL_ROUNDS):
+        while (
+            tool_manager
+            and response.stop_reason == "tool_use"
+            and rounds < MAX_TOOL_ROUNDS
+        ):
             rounds += 1
             tool_results, failed = self._run_tool_round(response, tool_manager)
             if not tool_results:
@@ -115,8 +121,9 @@ Provide only the direct answer to what was asked.
 
         return self._extract_text(response)
 
-    def _call_llm(self, messages: List[Dict[str, Any]], system: str,
-                  tools: Optional[List]):
+    def _call_llm(
+        self, messages: List[Dict[str, Any]], system: str, tools: Optional[List]
+    ):
         """Make a single Claude API call, offering tools when provided.
 
         ``messages`` is copied so each request carries an independent snapshot of
@@ -152,18 +159,23 @@ Provide only the direct answer to what was asked.
             except Exception as exc:  # tool_manager.execute_tool can propagate
                 result = f"Tool execution failed: {exc}"
                 failed = True
-            tool_results.append({
-                "type": "tool_result",
-                "tool_use_id": block.id,
-                "content": result,
-            })
+            tool_results.append(
+                {
+                    "type": "tool_result",
+                    "tool_use_id": block.id,
+                    "content": result,
+                }
+            )
         return tool_results, failed
 
     @staticmethod
     def _extract_text(response) -> str:
         """Return the first text block's text, or '' if the response has none."""
         return next(
-            (block.text for block in response.content
-             if getattr(block, "type", None) == "text"),
+            (
+                block.text
+                for block in response.content
+                if getattr(block, "type", None) == "text"
+            ),
             "",
         )

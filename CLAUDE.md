@@ -14,12 +14,25 @@ uv lock                                              # re-resolve the lockfile
 ./run.sh                                             # start the app (bash; from repo root)
 cd backend && uv run uvicorn app:app --reload --port 8000   # start the app directly (use this on Windows)
 uv run python -c "..."                               # run one-off Python inside the project env
+uv run pytest                                        # run the test suite (tests/, pythonpath=backend)
 ```
+
+### Code quality
+
+```bash
+./scripts/format.sh    # apply isort + black to backend/, tests/, main.py (writes changes)
+./scripts/lint.sh      # isort --check-only, black --check, flake8 (no writes; CI-style, non-zero on failure)
+./scripts/quality.sh   # format.sh + lint.sh + pytest, in one shot
+```
+
+- **black** (formatter) and **isort** (`profile = "black"`) are configured in `pyproject.toml`; **flake8** in `.flake8` (line length 88; `E203`/`W503`/`E501` deferred to black; `backend/app.py` skips `E402` for its pre-import `warnings.filterwarnings`).
+- All three are `dev` dependency-group packages — run them via `uv run` (the scripts already do).
+- Scripts are bash; on Windows run them from Git Bash.
 
 - App serves at `http://localhost:8000`, interactive API docs at `/docs`.
 - Requires a `.env` in the repo root with `ANTHROPIC_API_KEY=...` (see `.env.example`). `backend/config.py` loads it via `python-dotenv`.
 - **On Windows, run inside Git Bash** (per README) or use the direct `uvicorn` command above — `run.sh` is a bash script.
-- There is **no test suite, linter, or formatter** configured. `main.py` at the repo root is an unused stub.
+- `main.py` at the repo root is an unused stub.
 
 ## Runtime architecture
 

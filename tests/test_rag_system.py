@@ -5,7 +5,6 @@ patched; `ToolManager`, the tools, and `SessionManager` run for real."""
 import types
 
 import pytest
-
 from rag_system import RAGSystem
 
 
@@ -125,9 +124,10 @@ class TestSessionFlow:
 
         spy_hist.assert_not_called()
         spy_add.assert_not_called()
-        assert rag._fake_ai.generate_response.call_args.kwargs[
-            "conversation_history"
-        ] is None
+        assert (
+            rag._fake_ai.generate_response.call_args.kwargs["conversation_history"]
+            is None
+        )
 
 
 # --------------------------------------------------------------------------- #
@@ -227,8 +227,8 @@ class TestAnalyticsAndConfig:
     def test_real_config_values_are_sane(self):
         from config import config
 
-        assert config.MAX_RESULTS > 0, (
-            "MAX_RESULTS must be > 0 or every content search returns nothing"
-        )
+        assert (
+            config.MAX_RESULTS > 0
+        ), "MAX_RESULTS must be > 0 or every content search returns nothing"
         assert config.MAX_HISTORY >= 0
         assert isinstance(config.ANTHROPIC_MODEL, str) and config.ANTHROPIC_MODEL
