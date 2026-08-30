@@ -117,3 +117,122 @@ a light card.
   3px `--focus-ring` outline, now tuned for the light background.
 - No markup or JS changes were needed; the toggle from feature 1 already drives
   `data-theme` and persists the choice.
+
+---
+
+# 3. JavaScript-driven theme transitions
+
+Follow-up to feature 1. The theme toggle already flipped `data-theme` on click,
+but the "smooth transition between themes" was a blanket, always-on CSS rule.
+This change moves ownership of the cross-theme animation into the click handler
+so it only runs when the user actually switches themes.
+
+## Why
+
+- The old `transition: background-color/color/border-color 0.3s` rule was
+  permanently active on ~11 selectors. It could animate on first paint (when a
+  saved light theme is applied) and overlapped with elements that already have
+  their own `transition: all 0.2s` (e.g. `#chatInput`, `.suggested-item`),
+  making unrelated hover/focus changes drag the color transition along.
+- The spec asks for the smooth transition as *JavaScript functionality* — it
+  should be a deliberate effect triggered by the toggle, not ambient CSS.
+
+## Files changed
+
+### `frontend/style.css`
+
+- Replaced the always-on "Smooth theme transitions" block with a **scoped**
+  rule: `:root.theme-transition, :root.theme-transition *, …::before, …::after`
+  transitions `background-color`, `color`, `border-color`, `fill`, and
+  `box-shadow` over `0.3s` (with `!important` so it wins over per-element
+  `transition: all` for the ~300 ms it is applied).
+- The `theme-transition` class is present only while a switch is animating, so
+  nothing transitions on page load or during other interactions.
+- `prefers-reduced-motion: reduce` still fully disables it, and also pins
+  `.theme-toggle` / `.theme-toggle__icon` to `transition: none`.
+
+### `frontend/script.js`
+
+- Added `THEME_TRANSITION_MS = 300` (kept in sync with the CSS duration).
+- Added `getCurrentTheme()` helper — returns `'light'` / `'dark'` from the
+  `data-theme` attribute. Replaces the duplicated inline ternary that was in
+  both `initTheme()` and `toggleTheme()`.
+- Added `enableThemeTransition()` — adds `theme-transition` to `<html>`, then
+  removes it after `THEME_TRANSITION_MS` via a `setTimeout` that is cleared on
+  re-entry, so rapid toggles keep animating cleanly and the class never sticks.
+- `toggleTheme()` now calls `enableThemeTransition()` immediately before
+  `applyTheme()`, so the color cross-fade fires **only** on button click
+  (mouse, or Enter/Space via the native `<button>`).
+- `initTheme()` still just syncs ARIA state with no transition on load.
+
+### `frontend/index.html`
+
+- Bumped cache-busting query strings: `style.css?v=13 → v=14`,
+  `script.js?v=13 → v=14`.
+
+## Behaviour
+
+- Click (or keyboard-activate) the toggle → `<html>` gets `data-theme` flipped
+  **and** `theme-transition` for 300 ms → every themed surface, border, icon
+  fill, and shadow cross-fades to the other palette, then the class is removed.
+- Reload with a saved preference → correct theme is applied before first paint,
+  no animation.
+- `prefers-reduced-motion` users get an instant swap.
+
+---
+
+# 4. Full token coverage for both themes
+
+Implementation-details pass. Verified the four requirements and closed the one
+gap:
+
+| Requirement | Status |
+|---|---|
+| Use CSS custom properties for theme switching | already in place (`:root` = dark, `:root[data-theme="light"]` overrides) |
+| `data-theme` attribute on `body`/`html` | already in place — `applyTheme()` sets/removes `data-theme="light"` on `<html>` |
+| All existing elements work in both themes | **fixed** — see below |
+| Maintain visual hierarchy / design language | preserved — same values, just tokenized; hover-link contrast improved |
+
+## The gap: hard-coded colours that ignored `data-theme`
+
+A `grep` for hex / `rgba()` outside the `:root` token blocks found three
+declarations that were frozen to dark-theme values:
+
+| Location | Was | Now |
+|---|---|---|
+| `.sources-content .source-link:hover` | `color: #bae6fd` (pale sky-blue — ~1.3:1 on white, effectively invisible in light theme) | `color: var(--link-hover)` |
+| `.message.welcome-message .message-content` | `box-shadow: 0 4px 16px rgba(0,0,0,0.2)` (hard black shadow, too heavy for the light UI) | `box-shadow: var(--shadow-welcome)` |
+| `#sendButton:hover:not(:disabled)` | `box-shadow: 0 4px 12px rgba(37,99,235,0.3)` (fine visually, but untokenized) | `box-shadow: var(--shadow-primary)` |
+
+`header h1`'s `linear-gradient(#667eea → #764ba2)` was left as-is — `header` is
+`display: none`, so it never renders.
+
+## New tokens
+
+### `frontend/style.css`
+
+Added to the dark `:root` block:
+- `--shadow-welcome: 0 4px 16px rgba(0, 0, 0, 0.2);`
+- `--shadow-primary: 0 4px 12px rgba(37, 99, 235, 0.3);` — brand-blue accent
+  glow, identical in both themes, so it is defined once and inherited.
+- `--link-hover: #bae6fd;`
+
+Added to the `:root[data-theme="light"]` override block:
+- `--shadow-welcome: 0 4px 16px rgba(15, 23, 42, 0.1);` — matches the light
+  `--shadow` weight.
+- `--link-hover: #075985;` — sky-800, **6.4:1** on `#ffffff` (WCAG AA), a
+  visible darkening of the `#0369a1` resting link colour.
+
+After this change every colour, shadow, and border in `style.css` resolves
+through a theme token except the inert (`display:none`) header gradient.
+
+### `frontend/index.html`
+
+- Cache busters bumped `style.css?v=14 → v=15`, `script.js?v=14 → v=15`.
+
+## Result
+
+Toggling `data-theme` now re-themes **100%** of rendered elements. Link hover in
+the Sources panel is legible in light mode; the welcome card's drop shadow is
+proportionate to the light palette; no visual or hierarchy changes in dark mode
+(the dark tokens carry the exact previous values).

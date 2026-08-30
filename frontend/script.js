@@ -9,6 +9,28 @@ let chatMessages, chatInput, sendButton, totalCourses, courseTitles, newChatButt
 
 // Theme handling
 const THEME_STORAGE_KEY = 'themePreference';
+// Keep in sync with the 0.3s color transition in style.css (.theme-transition).
+const THEME_TRANSITION_MS = 300;
+
+function getCurrentTheme() {
+    return document.documentElement.getAttribute('data-theme') === 'light'
+        ? 'light'
+        : 'dark';
+}
+
+let themeTransitionTimer = null;
+
+// Enable the cross-theme color animation for one switch only. The class is
+// removed once the transition has run so it never affects initial load or
+// other interactions.
+function enableThemeTransition() {
+    const root = document.documentElement;
+    root.classList.add('theme-transition');
+    clearTimeout(themeTransitionTimer);
+    themeTransitionTimer = setTimeout(() => {
+        root.classList.remove('theme-transition');
+    }, THEME_TRANSITION_MS);
+}
 
 function applyTheme(theme) {
     const isLight = theme === 'light';
@@ -45,14 +67,14 @@ function storeTheme(theme) {
 }
 
 function initTheme() {
-    // The inline script in index.html has already applied the class; sync ARIA here.
-    const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
-    applyTheme(getStoredTheme() || current);
+    // The inline script in index.html has already applied the theme before first
+    // paint; just sync ARIA state here (no transition on load).
+    applyTheme(getStoredTheme() || getCurrentTheme());
 }
 
 function toggleTheme() {
-    const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
-    const next = current === 'light' ? 'dark' : 'light';
+    const next = getCurrentTheme() === 'light' ? 'dark' : 'light';
+    enableThemeTransition();
     applyTheme(next);
     storeTheme(next);
 }
