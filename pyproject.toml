@@ -16,6 +16,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "httpx>=0.28.1",
     "pytest>=9.1.1",
     "pytest-mock>=3.15.1",
 ]
@@ -23,4 +24,12 @@ dev = [
 [tool.pytest.ini_options]
 pythonpath = ["backend"]
 testpaths = ["tests"]
-addopts = "-ra"
+addopts = "-ra --strict-markers --strict-config"
+markers = [
+    "unit: fast, isolated tests of a single component",
+    "api: FastAPI endpoint tests driven through TestClient",
+    "integration: tests exercising multiple layers together",
+]
+filterwarnings = [
+    "ignore:resource_tracker:UserWarning",
+]

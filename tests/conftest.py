@@ -6,8 +6,13 @@ imports the backend uses (`from vector_store import ...`) resolve here too.
 """
 
 import types
+from typing import List, Optional
+from unittest.mock import MagicMock
 
 import pytest
+from fastapi import FastAPI, HTTPException
+from fastapi.testclient import TestClient
+from pydantic import BaseModel
 
 from vector_store import SearchResults
 
@@ -153,3 +158,93 @@ class RecordingToolManager:
 @pytest.fixture
 def recording_tool_manager():
     return RecordingToolManager
+
+
+# --------------------------------------------------------------------------- #
+# FastAPI endpoint testing
+# --------------------------------------------------------------------------- #
+# `backend/app.py` mounts `../frontend` as static files at import time, which
+# does not exist in the test environment (and pulls in the real RAGSystem /
+# ChromaDB / Anthropic client). Rather than import that module, the endpoints
+# are re-declared here against a mocked RAGSystem. The request/response models
+# and the route bodies mirror `backend/app.py` — keep them in sync.
+
+
+@pytest.fixture
+def mock_rag_system():
+    """A stand-in for `RAGSystem` covering everything the API routes touch."""
+    rag = MagicMock(name="RAGSystem")
+    rag.query.return_value = ("stub answer", [])
+    rag.get_course_analytics.return_value = {
+        "total_courses": 0,
+        "course_titles": [],
+    }
+    rag.session_manager.create_session.return_value = "test-session"
+    rag.session_manager.delete_session.return_value = None
+    return rag
+
+
+@pytest.fixture
+def api_app(mock_rag_system):
+    """A minimal FastAPI app exposing the same routes as `backend/app.py`,
+    without the static-file mount or startup document loading."""
+
+    app = FastAPI(title="Course Materials RAG System (test)")
+
+    class QueryRequest(BaseModel):
+        query: str
+        session_id: Optional[str] = None
+
+    class QueryResponse(BaseModel):
+        answer: str
+        sources: List[str]
+        session_id: str
+
+    class CourseStats(BaseModel):
+        total_courses: int
+        course_titles: List[str]
+
+    @app.post("/api/query", response_model=QueryResponse)
+    async def query_documents(request: QueryRequest):
+        try:
+            session_id = request.session_id
+            if not session_id:
+                session_id = mock_rag_system.session_manager.create_session()
+            answer, sources = mock_rag_system.query(request.query, session_id)
+            return QueryResponse(
+                answer=answer, sources=sources, session_id=session_id
+            )
+        except Exception as e:  # noqa: BLE001 - mirrors app.py
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/api/courses", response_model=CourseStats)
+    async def get_course_stats():
+        try:
+            analytics = mock_rag_system.get_course_analytics()
+            return CourseStats(
+                total_courses=analytics["total_courses"],
+                course_titles=analytics["course_titles"],
+            )
+        except Exception as e:  # noqa: BLE001 - mirrors app.py
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.delete("/api/session/{session_id}")
+    async def clear_session(session_id: str):
+        try:
+            mock_rag_system.session_manager.delete_session(session_id)
+            return {"status": "ok"}
+        except Exception as e:  # noqa: BLE001 - mirrors app.py
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/")
+    async def root():
+        # `app.py` serves the static frontend index here; the test app just
+        # confirms the route is reachable.
+        return {"status": "ok"}
+
+    return app
+
+
+@pytest.fixture
+def api_client(api_app):
+    return TestClient(api_app)
