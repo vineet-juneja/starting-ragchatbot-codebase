@@ -8,7 +8,6 @@ imports the backend uses (`from vector_store import ...`) resolve here too.
 import types
 
 import pytest
-
 from vector_store import SearchResults
 
 
@@ -52,8 +51,8 @@ class FakeVectorStore:
         # search() returns this; may be a SearchResults or a zero-arg callable
         self.search_result = SearchResults(documents=[], metadata=[], distances=[])
         self.search_calls = []
-        self.lesson_links = {}          # (course_title, lesson_number) -> url
-        self.outline_result = None      # dict or None, returned by get_course_outline
+        self.lesson_links = {}  # (course_title, lesson_number) -> url
+        self.outline_result = None  # dict or None, returned by get_course_outline
         self.outline_calls = []
         self.course_count = 0
         self.course_titles = []

@@ -1,8 +1,6 @@
 """Tests for `CourseSearchTool.execute` (+ `_format_results`, `CourseOutlineTool`,
 and `ToolManager`, since the sources plumbing lives in the same module)."""
 
-import pytest
-
 from search_tools import CourseOutlineTool, CourseSearchTool, ToolManager
 from vector_store import SearchResults
 

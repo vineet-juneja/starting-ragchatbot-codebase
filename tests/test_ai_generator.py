@@ -3,7 +3,6 @@ correctly? The `anthropic` client is patched (see `anthropic_create` fixture);
 no network calls happen."""
 
 import pytest
-
 from ai_generator import AIGenerator
 
 
@@ -46,9 +45,7 @@ class TestGenerateResponsePlain:
     ):
         anthropic_create.return_value = messages.text("x")
 
-        generator.generate_response(
-            "q", conversation_history="User: hi\nAssistant: yo"
-        )
+        generator.generate_response("q", conversation_history="User: hi\nAssistant: yo")
 
         system = anthropic_create.call_args.kwargs["system"]
         assert "Previous conversation:" in system
@@ -150,9 +147,7 @@ class TestToolExecutionFlow:
             messages.text("done"),
         ]
 
-        out = generator.generate_response(
-            "q", tools=[{"name": "t"}], tool_manager=tm
-        )
+        out = generator.generate_response("q", tools=[{"name": "t"}], tool_manager=tm)
 
         assert len(tm.calls) == 1
         assert out == "done"
@@ -251,9 +246,7 @@ class TestSequentialToolRounds:
         tm = recording_tool_manager()
         anthropic_create.return_value = messages.text("direct answer")
 
-        out = generator.generate_response(
-            "q", tools=[{"name": "t"}], tool_manager=tm
-        )
+        out = generator.generate_response("q", tools=[{"name": "t"}], tool_manager=tm)
 
         assert out == "direct answer"
         assert anthropic_create.call_count == 1
@@ -271,9 +264,7 @@ class TestSequentialToolRounds:
             messages.tool_use("search_course_content", {"query": "c"}, tool_id="t3"),
         ]
 
-        out = generator.generate_response(
-            "q", tools=[{"name": "t"}], tool_manager=tm
-        )
+        out = generator.generate_response("q", tools=[{"name": "t"}], tool_manager=tm)
 
         assert anthropic_create.call_count == 3
         assert [c["kwargs"] for c in tm.calls] == [{"query": "a"}, {"query": "b"}]
@@ -293,15 +284,11 @@ class TestSequentialToolRounds:
 
         tm = BoomToolManager()
         anthropic_create.side_effect = [
-            messages.tool_use(
-                "search_course_content", {"query": "x"}, tool_id="tu_1"
-            ),
+            messages.tool_use("search_course_content", {"query": "x"}, tool_id="tu_1"),
             messages.text("Sorry, I could not retrieve that right now."),
         ]
 
-        out = generator.generate_response(
-            "q", tools=[{"name": "t"}], tool_manager=tm
-        )
+        out = generator.generate_response("q", tools=[{"name": "t"}], tool_manager=tm)
 
         assert out == "Sorry, I could not retrieve that right now."
         assert len(tm.calls) == 1
@@ -327,15 +314,11 @@ class TestSequentialToolRounds:
             messages.tool_use(
                 "get_course_outline", {"course_title": "MCP"}, tool_id="tu_a"
             ),
-            messages.tool_use(
-                "search_course_content", {"query": "x"}, tool_id="tu_b"
-            ),
+            messages.tool_use("search_course_content", {"query": "x"}, tool_id="tu_b"),
             messages.text("ok"),
         ]
 
-        generator.generate_response(
-            "q", tools=[{"name": "t"}], tool_manager=tm
-        )
+        generator.generate_response("q", tools=[{"name": "t"}], tool_manager=tm)
 
         calls = anthropic_create.call_args_list
 
@@ -344,9 +327,7 @@ class TestSequentialToolRounds:
         assert round2_messages[1]["role"] == "assistant"
         assert round2_messages[2] == {
             "role": "user",
-            "content": [
-                {"type": "tool_result", "tool_use_id": "tu_a", "content": "R"}
-            ],
+            "content": [{"type": "tool_result", "tool_use_id": "tu_a", "content": "R"}],
         }
 
         synth_messages = calls[2].kwargs["messages"]
@@ -354,9 +335,7 @@ class TestSequentialToolRounds:
         assert synth_messages[3]["role"] == "assistant"
         assert synth_messages[4] == {
             "role": "user",
-            "content": [
-                {"type": "tool_result", "tool_use_id": "tu_b", "content": "R"}
-            ],
+            "content": [{"type": "tool_result", "tool_use_id": "tu_b", "content": "R"}],
         }
         assert synth_messages[:3] == round2_messages
 
@@ -392,9 +371,7 @@ class TestSequentialToolRounds:
             messages.text("answer"),
         ]
 
-        out = generator.generate_response(
-            "q", tools=[{"name": "t"}], tool_manager=tm
-        )
+        out = generator.generate_response("q", tools=[{"name": "t"}], tool_manager=tm)
 
         assert anthropic_create.call_count == 2
         assert out == "answer"

@@ -1,0 +1,14 @@
+[flake8]
+max-line-length = 88
+# E203 (whitespace before ':') and W503 (line break before binary operator)
+# conflict with black's formatting; E501 is enforced by black instead.
+extend-ignore = E203, W503, E501
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    backend/chroma_db,
+    docs
+per-file-ignores =
+    # app.py filters warnings before importing chromadb, so imports follow code.
+    backend/app.py:E402
