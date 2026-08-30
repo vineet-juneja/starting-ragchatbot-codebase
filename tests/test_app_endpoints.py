@@ -36,9 +36,7 @@ class TestQueryEndpoint:
         }
         mock_rag_system.query.assert_called_once_with("what is mcp", "s-1")
 
-    def test_creates_a_session_when_none_supplied(
-        self, api_client, mock_rag_system
-    ):
+    def test_creates_a_session_when_none_supplied(self, api_client, mock_rag_system):
         mock_rag_system.session_manager.create_session.return_value = "fresh-sid"
         mock_rag_system.query.return_value = ("answer", [])
 
@@ -52,9 +50,7 @@ class TestQueryEndpoint:
     def test_reuses_supplied_session_without_creating_one(
         self, api_client, mock_rag_system
     ):
-        api_client.post(
-            "/api/query", json={"query": "q", "session_id": "keep-me"}
-        )
+        api_client.post("/api/query", json={"query": "q", "session_id": "keep-me"})
 
         mock_rag_system.session_manager.create_session.assert_not_called()
 
@@ -66,9 +62,7 @@ class TestQueryEndpoint:
         resp = api_client.post("/api/query", json={})
         assert resp.status_code == 422
 
-    def test_rag_failure_becomes_500_with_detail(
-        self, api_client, mock_rag_system
-    ):
+    def test_rag_failure_becomes_500_with_detail(self, api_client, mock_rag_system):
         mock_rag_system.query.side_effect = RuntimeError("boom")
 
         resp = api_client.post("/api/query", json={"query": "q"})
@@ -129,9 +123,7 @@ class TestClearSessionEndpoint:
         )
 
     def test_delete_failure_becomes_500(self, api_client, mock_rag_system):
-        mock_rag_system.session_manager.delete_session.side_effect = KeyError(
-            "missing"
-        )
+        mock_rag_system.session_manager.delete_session.side_effect = KeyError("missing")
 
         resp = api_client.delete("/api/session/nope")
 

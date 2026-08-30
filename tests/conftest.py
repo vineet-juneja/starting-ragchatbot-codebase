@@ -210,9 +210,7 @@ def api_app(mock_rag_system):
             if not session_id:
                 session_id = mock_rag_system.session_manager.create_session()
             answer, sources = mock_rag_system.query(request.query, session_id)
-            return QueryResponse(
-                answer=answer, sources=sources, session_id=session_id
-            )
+            return QueryResponse(answer=answer, sources=sources, session_id=session_id)
         except Exception as e:  # noqa: BLE001 - mirrors app.py
             raise HTTPException(status_code=500, detail=str(e))
 
