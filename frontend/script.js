@@ -5,7 +5,57 @@ const API_URL = '/api';
 let currentSessionId = null;
 
 // DOM elements
-let chatMessages, chatInput, sendButton, totalCourses, courseTitles, newChatButton;
+let chatMessages, chatInput, sendButton, totalCourses, courseTitles, newChatButton, themeToggle;
+
+// Theme handling
+const THEME_STORAGE_KEY = 'themePreference';
+
+function applyTheme(theme) {
+    const isLight = theme === 'light';
+
+    if (isLight) {
+        document.documentElement.setAttribute('data-theme', 'light');
+    } else {
+        document.documentElement.removeAttribute('data-theme');
+    }
+
+    if (themeToggle) {
+        themeToggle.setAttribute('aria-pressed', String(isLight));
+        themeToggle.setAttribute(
+            'aria-label',
+            isLight ? 'Switch to dark theme' : 'Switch to light theme'
+        );
+    }
+}
+
+function getStoredTheme() {
+    try {
+        return localStorage.getItem(THEME_STORAGE_KEY);
+    } catch (e) {
+        return null;
+    }
+}
+
+function storeTheme(theme) {
+    try {
+        localStorage.setItem(THEME_STORAGE_KEY, theme);
+    } catch (e) {
+        /* localStorage unavailable - toggle still works for the session */
+    }
+}
+
+function initTheme() {
+    // The inline script in index.html has already applied the class; sync ARIA here.
+    const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    applyTheme(getStoredTheme() || current);
+}
+
+function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    const next = current === 'light' ? 'dark' : 'light';
+    applyTheme(next);
+    storeTheme(next);
+}
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -16,7 +66,9 @@ document.addEventListener('DOMContentLoaded', () => {
     totalCourses = document.getElementById('totalCourses');
     courseTitles = document.getElementById('courseTitles');
     newChatButton = document.getElementById('newChatButton');
+    themeToggle = document.getElementById('themeToggle');
 
+    initTheme();
     setupEventListeners();
     createNewSession();
     loadCourseStats();
@@ -32,6 +84,11 @@ function setupEventListeners() {
 
     // New chat
     newChatButton.addEventListener('click', startNewChat);
+
+    // Theme toggle (button element handles Enter/Space keys natively)
+    if (themeToggle) {
+        themeToggle.addEventListener('click', toggleTheme);
+    }
 
 
     // Suggested questions
